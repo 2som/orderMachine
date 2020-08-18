@@ -44,7 +44,6 @@ const sendOrder = context => {
     return true;
 }
 
-
 const orderMachine = Machine({
     id: 'selfService',
     context: {
@@ -80,7 +79,8 @@ const orderMachine = Machine({
                     actions: addProductToBasket
                 },
                 'REMOVEPRODUCT':{
-                    actions: removeProductFromBasket
+                    actions: removeProductFromBasket,
+                    cond: productsInTheBasket
                 },
                 'CHECKOUT':[
                     {   
@@ -139,3 +139,5 @@ const orderMachine = Machine({
         }
     },
 });
+
+const service = interpret(orderMachine);
