@@ -2,6 +2,7 @@ const { Machine, interpret, actions} = require("xstate");
 
 const ORDERS = []
 
+//actions
 const addProductToBasket = (context, event) => {
     console.log(`[assemblingOrder] adding ${event.productName} to basket`);
     let product;
@@ -29,19 +30,19 @@ const notifyAboutPrice = context => {
 
 const clearOrder = context => {
     context.order = [];
-    context.transactionsCount = 0;
     console.log('[restState] cleanup')
 }
+
+//guards
+const productsInTheBasket =  context => context.order.length > 0;
+
+const paymentSucceded = () => Math.random() >= 0.2;
 
 const sendOrder = context => {
     ORDERS.push([...context.order]);
     console.log('current orders:', ORDERS)
     return true;
 }
-
-const productsInTheBasket =  context => context.order.length > 0;
-
-const paymentSucceded = () => Math.random() >= 1;
 
 
 const orderMachine = Machine({
@@ -64,7 +65,6 @@ const orderMachine = Machine({
         order: [],
     },
     initial: 'restingState',
-
     states: {
         restingState: {
             entry: clearOrder,
@@ -106,7 +106,6 @@ const orderMachine = Machine({
                 }
             }
         },
-
         cardTransaction: {
             entry: actions.log('[cardTransaction] activating terminal'),
             on:{
