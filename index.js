@@ -1,10 +1,10 @@
 const { Machine, interpret, actions} = require("xstate");
+const exampleUsage = require('./example');
 
 const ORDERS = []
 
 //actions
 const addProductToBasket = (context, event) => {
-    console.log(`[assemblingOrder] adding ${event.productName} to basket`);
     let product;
     for(let entry of context.products){
         if(entry.name === event.productName){
@@ -12,14 +12,22 @@ const addProductToBasket = (context, event) => {
             break;
         }
     }
-    context.order.push(product);
+    if(product){
+        console.log(`[assemblingOrder] adding ${event.productName} to basket`);
+        context.order.push(product);
+        console.log('current order: ', context.order);
+    }
 }
 
 const removeProductFromBasket = (context, event) => {
     const index = context.order.findIndex((product) => product.name === event.productName)
-    context.order.splice(index, 1);
-    console.log('[assembingOrder] removed product:', event.productName )
-    console.log('[assemblingOrder] current order', context.order)
+    if(index !== -1){
+        context.order.splice(index, 1);
+        console.log('[assembingOrder] removed product:', event.productName )
+        console.log('[assemblingOrder] current order', context.order)
+    }else{
+        console.log('product not found');
+    }
 }
 
 
@@ -30,16 +38,17 @@ const notifyAboutPrice = context => {
 
 const clearOrder = context => {
     context.order = [];
-    console.log('[restState] cleanup')
+    console.log('[restingState] cleanup')
 }
 
 //guards
 const productsInTheBasket =  context => context.order.length > 0;
 
-const paymentSucceded = () => Math.random() >= 0.2;
+const paymentSucceded = () => Math.random() >= 0.5;
 
 const sendOrder = context => {
     ORDERS.push([...context.order]);
+    console.log('transaction succeded!')
     console.log('current orders:', ORDERS)
     return true;
 }
@@ -74,6 +83,7 @@ const orderMachine = Machine({
             }
         },
         assemblingOrder: {
+            entry: actions.log(context => `current order: ${context.order}`),
             on: {
                 'ADDPRODUCT':{
                     actions: addProductToBasket
@@ -111,7 +121,7 @@ const orderMachine = Machine({
             on:{
                 'PAY': [
                     {   target: 'completeOrder',
-                        cond: paymentSucceded
+                        cond: paymentSucceded,
                     }, {target: 'paymentFailure', actions: actions.log('[cardTransaction] payment failed')}
                 ],
             },
@@ -130,14 +140,17 @@ const orderMachine = Machine({
             after: {30000: 'restingState'}
         },
         completeOrder: {
-            on: {
-                '': {
-                    target: 'restingState',
-                    cond: sendOrder
-                }
+            always: {
+                target: 'restingState',
+                cond: sendOrder
             }
         }
     },
 });
 
-const service = interpret(orderMachine);
+const service = interpret(orderMachine).onTransition(state => {
+    console.log('current state: ', state.value)
+    console.log('available actions: ', state.nextEvents)
+});;
+
+exampleUsage(service);
